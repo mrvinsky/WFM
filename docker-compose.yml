@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  wfm-app:
+    build: .
+    container_name: wfm_studio_rotation
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./public:/app/public
+      - ./server.js:/app/server.js
+    restart: unless-stopped

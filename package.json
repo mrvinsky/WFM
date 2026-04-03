@@ -1,0 +1,16 @@
+{
+  "name": "wfm-studio-rotation",
+  "version": "4.0.0",
+  "description": "Live Studio Rotation Dashboard - Pro Level",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
+  }
+}

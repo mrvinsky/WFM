@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WFM Admin Panel - Triple Shift</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; margin: 0; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .pulse-caution { animation: pulseWarning 1.5s infinite; }
+        @keyframes pulseWarning { 0%, 100% { background-color: rgba(245, 158, 11, 0.2); } 50% { background-color: rgba(245, 158, 11, 0.6); } }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+        <!-- Header -->
+        <div class="w-full max-w-7xl flex flex-col md:flex-row justify-between items-center mb-8 gap-4 glass p-6 rounded-3xl border border-white/10 shadow-2xl">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-rose-600 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/30">
+                    <span class="text-2xl font-black text-white">W</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight text-white uppercase">WFM ADMIN <span class="text-rose-500">PRO</span></h1>
+                    <p id="ui-subtitle" class="text-slate-400 text-xs font-bold tracking-widest uppercase opacity-70">V2.4 - DYNAMIC AUTO-ROTOR</p>
+                </div>
+            </div>
+            
+            <div class="flex bg-black/40 p-1 rounded-xl border border-white/5 gap-1">
+                <button onclick="changeShift(1)" id="shift-btn-1" class="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-rose-600 text-white">SHIFT 1</button>
+                <button onclick="changeShift(2)" id="shift-btn-2" class="px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">SHIFT 2</button>
+                <button onclick="changeShift(3)" id="shift-btn-3" class="px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">SHIFT 3</button>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div id="clock" class="text-xl font-mono font-bold text-rose-500 bg-black/40 px-4 py-2 rounded-xl border border-white/10">00:00:00</div>
+                <div class="flex gap-1" id="language-switcher">
+                    <button id="lang-TR" onclick="setLang('TR')" class="px-3 py-1 text-xs font-bold rounded bg-blue-600 text-white">TR</button>
+                    <button id="lang-EN" onclick="setLang('EN')" class="px-3 py-1 text-xs font-bold rounded text-gray-400 border border-white/10">EN</button>
+                </div>
+            </div>
+        </div>
+
+        <main class="w-full max-w-7xl space-y-8">
+            <div class="flex flex-wrap items-center justify-between gap-6 glass p-6 rounded-3xl border border-white/10 shadow-xl overflow-hidden">
+                <div class="flex gap-4 items-center">
+                    <div class="relative group">
+                        <input type="file" id="excel-file" class="hidden" onchange="document.getElementById('file-name').innerText = this.files[0].name">
+                        <label for="excel-file" class="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-all cursor-pointer border border-white/10 font-bold text-sm">
+                            <span>📂</span> <span id="file-name">Select Roster</span>
+                        </label>
+                    </div>
+                    <button id="btn-phase1" onclick="runPhase1()" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black transition-all shadow-lg active:scale-95 text-sm uppercase">1. Import</button>
+                    <button id="btn-phase2" onclick="runPhase2()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black transition-all shadow-lg active:scale-95 disabled:opacity-30 text-sm uppercase" disabled>2. Release</button>
+                </div>
+
+                <div id="live-controls" class="hidden items-center gap-6">
+                    <div id="notif-bar" class="hidden animate-pulse">
+                        <div class="bg-rose-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/40 flex items-center gap-2">
+                            <span class="w-2 h-2 bg-white rounded-full animate-ping"></span>
+                            Extra Change Request
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 bg-black/20 p-2 rounded-xl border border-white/5">
+                        <button onclick="prevInterval()" class="p-4 bg-slate-800 hover:bg-slate-700 rounded-lg text-white">◀</button>
+                        <div class="flex flex-col items-center min-w-[140px]">
+                            <span id="current-interval-label" class="font-mono font-black text-rose-500 text-lg">INT 1</span>
+                            <div class="flex items-center gap-2 mt-1">
+                                <input type="checkbox" id="auto-next-toggle" class="w-3 h-3 accent-rose-500" onchange="toggleAutoNext()" checked>
+                                <label for="auto-next-toggle" class="text-[8px] font-bold text-slate-500 uppercase">Auto-Next</label>
+                                <span id="auto-next-timer" class="text-[10px] font-mono font-bold text-amber-500 hidden">30:00</span>
+                            </div>
+                        </div>
+                        <button onclick="nextInterval()" class="p-4 bg-slate-800 hover:bg-slate-700 rounded-lg text-white">▶</button>
+                    </div>
+                    <button onclick="resetShift()" class="p-4 bg-rose-600/20 hover:bg-rose-600/40 text-rose-500 border border-rose-600/30 rounded-xl transition-all font-black text-xs">Reset</button>
+                </div>
+            </div>
+
+            <div id="nav-container" class="flex flex-wrap gap-2">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-6 py-3 rounded-xl font-black text-sm transition-all bg-rose-600 text-white shadow-lg">DASHBOARD</button>
+                <button onclick="switchTab('building')" id="tab-building" class="px-6 py-3 rounded-xl font-black text-sm transition-all text-slate-400 hover:bg-white/5">BUILDINGS</button>
+                <button onclick="switchTab('matrix')" id="tab-matrix" class="px-6 py-3 rounded-xl font-black text-sm transition-all text-slate-400 hover:bg-white/5">MATRIX</button>
+                <div class="w-px bg-white/10 self-stretch mx-1"></div>
+                <a href="/shuffler-admin" target="_blank" class="px-6 py-3 rounded-xl font-black text-sm transition-all text-violet-300 bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 flex items-center gap-2">
+                    <span>🔀</span> SHUFFLER
+                </a>
+            </div>
+
+            <div id="content" class="min-h-[500px]"></div>
+        </main>
+    </div>
+
+    <!-- Swap Modal -->
+    <div id="swap-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="glass max-w-md w-full p-8 rounded-3xl border border-white/10 shadow-2xl">
+            <h2 class="text-xl font-black text-white mb-2 uppercase tracking-tight">Execute Live Swap</h2>
+            <p id="swap-info" class="text-slate-400 text-xs mb-6 font-bold uppercase tracking-widest"></p>
+            <div id="swap-list" class="space-y-3 max-h-[300px] overflow-y-auto pr-2 mb-8"></div>
+            <div class="flex gap-4">
+                <button onclick="document.getElementById('swap-modal').classList.add('hidden')" class="flex-1 py-3 rounded-xl bg-slate-800 text-white font-bold text-sm">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STUDIOS = {
+            '7':    { b: 'A2', t: ['7.1','7.2','7.3','7.4'], pop: 30 },
+            '10':   { b: 'A2', t: ['10.1','10.2','10.3','10.4'], pop: 30 },
+            '3&4':  { b: 'A2', t: ['3.1','3.2','3.3','4.1'], pop: 30 },
+            '8':    { b: 'E1', t: ['8.1','8.2','8.3','8.4','8.5'], pop: 30 },
+            '9':    { b: 'E1', t: ['9.1','9.2','9.3','9.4','9.5'], pop: 30 }
+        };
+        const STUDIO_ORDER = ['7', '10', '3&4', '8', '9'];
+        ['RS', 'SR'].forEach(lang => {
+            for(let i=1; i<=6; i++) {
+                const sid = `${lang}${i}`; 
+                const building = (i <= 3) ? 'A2' : 'E1';
+                STUDIOS[sid] = { b: building, t: Array.from({length: 5}, (_, idx) => `${sid}.${idx+1}`), pop: 25 };
+                STUDIO_ORDER.push(sid);
+            }
+        });
+
+        let state = { shift: 1, presenters: [], phase: 0, currentInterval: 0, activeTab: 'dashboard', lang: 'TR', notifications: [], autoNext: false, autoNextRemaining: 1800 };
+        let autoNextTimer = null;
+
+        function toggleAutoNext() {
+            state.autoNext = document.getElementById('auto-next-toggle').checked;
+            const timerEl = document.getElementById('auto-next-timer');
+            if (state.autoNext) {
+                timerEl.classList.remove('hidden');
+                state.autoNextRemaining = 1800; // Reset to 30 mins
+                if (autoNextTimer) clearInterval(autoNextTimer);
+                autoNextTimer = setInterval(() => {
+                    if (state.phase === 2 && state.currentInterval < 15) {
+                        state.autoNextRemaining--;
+                        let mins = Math.floor(state.autoNextRemaining / 60);
+                        let secs = state.autoNextRemaining % 60;
+                        timerEl.innerText = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+                        
+                        if (state.autoNextRemaining <= 0) {
+                            nextInterval();
+                            state.autoNextRemaining = 1800;
+                        } else if (state.autoNextRemaining < 120) { // Caution in last 2 mins
+                            refreshUI(); 
+                        }
+                    }
+                }, 1000); 
+            } else {
+                timerEl.classList.add('hidden');
+                if (autoNextTimer) clearInterval(autoNextTimer);
+            }
+        }
+
+        function setLang(l) { 
+            state.lang = l; 
+            ['TR','EN'].forEach(k => document.getElementById('lang-'+k).className = (k===l)?"px-3 py-1 text-xs font-bold rounded bg-blue-600 text-white":"px-3 py-1 text-xs font-bold rounded text-gray-400");
+            refreshUI(); 
+        }
+
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('tr-TR'); }, 1000);
+
+        async function changeShift(s) {
+            state.shift = s;
+            [1,2,3].forEach(n => document.getElementById(`shift-btn-${n}`).className = (n===s)?"px-4 py-2 rounded-lg text-xs font-bold bg-rose-600 text-white":"px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white");
+            await sync();
+        }
+
+        function switchTab(t) {
+            state.activeTab = t;
+            ['dashboard','building','matrix'].forEach(k => document.getElementById('tab-'+k).className = (k===t)?"px-6 py-3 rounded-xl font-black text-sm bg-rose-600 text-white shadow-lg":"px-6 py-3 rounded-xl font-black text-sm text-slate-400 hover:bg-white/5");
+            refreshUI();
+        }
+
+        async function sync() {
+            try {
+                let r = await fetch(`/api/state?shift=${state.shift}`);
+                let data = await r.json();
+                state.phase = data.phase;
+                state.presenters = data.presenters;
+                state.currentInterval = data.currentInterval;
+                state.notifications = data.notifications || [];
+                
+                // Calculate readiness for Release button (Ultra Basic Mode)
+                let totalReady = state.presenters.filter(p => p.status === 'ready').length;
+
+                const btnPhase2 = document.getElementById('btn-phase2');
+                if (state.phase === 1) {
+                    const isReady = totalReady > 0;
+                    btnPhase2.disabled = !isReady;
+                    btnPhase2.innerText = isReady ? `2. Release (Phase 2)` : `2. Release (Waiting for Ready)`;
+                    btnPhase2.className = isReady 
+                        ? "px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black transition-all shadow-lg active:scale-95 text-sm uppercase"
+                        : "px-6 py-3 bg-slate-700 text-slate-400 rounded-xl font-black text-sm uppercase cursor-not-allowed text-[10px]";
+                } else {
+                    btnPhase2.disabled = true;
+                    btnPhase2.innerText = "2. Release";
+                    btnPhase2.className = "px-6 py-3 bg-slate-700 text-slate-400 rounded-xl font-black text-sm uppercase cursor-not-allowed text-[10px]";
+                }
+
+                const notifBar = document.getElementById('notif-bar');
+                if (state.notifications.length > 0) {
+                    notifBar.classList.remove('hidden');
+                } else {
+                    notifBar.classList.add('hidden');
+                }
+
+                if (state.phase === 2) {
+                    document.getElementById('live-controls').classList.remove('hidden');
+                    document.getElementById('current-interval-label').innerText = `INT ${state.currentInterval+1}`;
+                } else { document.getElementById('live-controls').classList.add('hidden'); }
+                refreshUI();
+            } catch(e) {}
+        }
+
+        function refreshUI() {
+            const container = document.getElementById('content');
+            if (state.phase === 0) {
+                container.innerHTML = `<div class="h-[400px] flex items-center justify-center text-slate-500 font-bold italic glass rounded-3xl opacity-50">Shift ${state.shift}: Standing by for Roster...</div>`;
+                return;
+            }
+            if (state.activeTab === 'dashboard') renderDashboard();
+            else if (state.activeTab === 'building') renderBuilding();
+            else renderMatrix();
+        }
+
+        function renderDashboard() {
+            const container = document.getElementById('content');
+            let onAirCount = 0; let breakCount = 0;
+            if (state.phase === 2) {
+                state.presenters.forEach(p => {
+                    let v = p.schedule[state.currentInterval];
+                    if (v === '/' || v === '/X') breakCount++; else onAirCount++;
+                });
+            }
+            container.innerHTML = `
+                <div class="fade-in space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="glass p-8 rounded-3xl text-center border border-white/5">
+                            <div class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Total Staff</div>
+                            <div class="text-5xl font-black text-white">${state.presenters.length}</div>
+                        </div>
+                        <div class="glass p-8 rounded-3xl text-center border border-white/5">
+                            <div class="text-[10px] font-black text-emerald-400 mb-2 uppercase tracking-widest">On Air Now</div>
+                            <div class="text-5xl font-black text-emerald-500">${onAirCount}</div>
+                        </div>
+                        <div class="glass p-8 rounded-3xl text-center border border-white/5">
+                            <div class="text-[10px] font-black text-amber-500 mb-2 uppercase tracking-widest">On Break</div>
+                            <div class="text-5xl font-black text-amber-600">${breakCount}</div>
+                        </div>
+                    </div>
+                    <div class="glass p-8 rounded-3xl border border-white/5"><h3 class="font-black text-white mb-6 uppercase text-xs tracking-widest">Building Occupancy</h3>
+                        <div class="space-y-6">${['A2','E1'].map(b => {
+                            let s = state.presenters.filter(p => p.building === b).length;
+                            let p = (s / (state.presenters.length || 1) * 100).toFixed(0);
+                            return `<div><div class="flex justify-between text-[10px] font-bold text-slate-400 mb-2 uppercase">Building ${b} (${s} Pers) <span>${p}%</span></div>
+                                <div class="w-full h-3 bg-black/40 rounded-full overflow-hidden border border-white/5"><div class="h-full bg-rose-600" style="width: ${p}%"></div></div></div>`;
+                        }).join('')}</div>
+                    </div>
+                </div>`;
+        }
+
+        function renderBuilding() {
+            const container = document.getElementById('content');
+            let html = `<div class="fade-in grid grid-cols-1 lg:grid-cols-2 gap-8">`;
+            ['A2','E1'].forEach(b => {
+                html += `<div class="glass p-6 rounded-3xl border border-white/10">
+                    <h3 class="text-sm font-black text-rose-500 mb-6 border-b border-white/10 pb-4 uppercase tracking-widest">BUILDING ${b}</h3>
+                    <div class="space-y-4">`;
+                STUDIO_ORDER.filter(sid => STUDIOS[sid].b === b).forEach(sid => {
+                    let people = state.presenters.filter(p => p.studio === sid);
+                    html += `<div class="bg-black/20 p-4 rounded-xl border border-white/5 group hover:border-blue-500/30 transition-all">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="font-black text-white uppercase text-[10px]">Studio ${sid}</span>
+                            <span class="text-[10px] bg-white/5 text-slate-400 px-3 py-1 rounded-full font-bold">${people.length} Pers.</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1">${people.map(p => `<span class="text-[9px] font-mono bg-black/40 px-2 py-1 rounded text-slate-500 border border-white/5">#${p.id}</span>`).join('')}</div>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            });
+            container.innerHTML = html + `</div>`;
+        }
+
+        let matrixLang = 'TR'; let matrixStudio = '7';
+        function renderMatrix() {
+            const container = document.getElementById('content');
+            const studios = STUDIO_ORDER.filter(s => isStudioInLang(s, matrixLang));
+            if (!studios.includes(matrixStudio)) matrixStudio = studios[0];
+            let html = `<div class="fade-in space-y-6">
+                <div class="flex gap-2 p-2 bg-black/20 rounded-2xl border border-white/5">
+                    ${['TR','RS','SR'].map(l => `<button onclick="matrixLang='${l}'; renderMatrix()" class="px-6 py-2 rounded-xl text-xs font-black transition-all ${matrixLang===l?'bg-blue-600 text-white':'text-slate-400 hover:text-white'}">${l}</button>`).join('')}
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    ${studios.map(sid => `<button onclick="matrixStudio='${sid}'; renderMatrix()" class="px-4 py-2 rounded-xl text-[10px] font-black transition-all ${matrixStudio===sid?'bg-emerald-600 text-white':'bg-white/5 text-slate-400 hover:text-white'}">${sid}</button>`).join('')}
+                </div>`;
+            let people = state.presenters.filter(p => p.studio === matrixStudio);
+            
+            // Sort by status: Ready > Arrived > Pending
+            people.sort((a, b) => {
+                const order = { 'ready': 0, 'arrived': 1, 'pending': 2 };
+                return (order[a.status || 'pending'] || 2) - (order[b.status || 'pending'] || 2);
+            });
+
+            html += `<div class="glass rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative"><div class="overflow-x-auto"><table class="w-full text-left text-sm border-collapse"><thead><tr class="bg-slate-950/80 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                <th class="p-4 sticky left-0 bg-slate-900 border-r border-white/5 w-40">Presenter</th>
+                ${Array.from({length:16}, (_,i) => `<th class="p-4 text-center border-r border-white/5 ${state.currentInterval===i?'text-rose-500':''}">INT ${i+1}</th>`).join('')}
+                </tr></thead><tbody class="divide-y divide-white/5">${people.map(p => {
+                    const hasNotif = state.notifications.find(n => n.id === p.id);
+                    let idBgClass = "bg-slate-800 text-slate-300";
+                    if (p.status === 'ready') idBgClass = "bg-emerald-600 text-white shadow-[inset_4px_0_0_0_#059669]";
+                    else idBgClass = "bg-amber-500 text-black shadow-[inset_4px_0_0_0_#d97706]";
+
+                    return `
+                    <tr class="hover:bg-white/5 transition-colors ${hasNotif ? 'bg-rose-500/20 shadow-[inset_4px_0_0_0_#e11d48]' : ''}">
+                        <td class="p-4 font-mono font-bold sticky left-0 border-r border-white/5 ${idBgClass}">
+                            <div class="flex items-center justify-between gap-2">
+                                <span>#${p.id}</span>
+                                ${hasNotif ? `<button onclick="openSwapModal('${p.id}')" class="px-2 py-1 bg-rose-600 text-white text-[8px] font-black rounded animate-pulse">SWAP</button>` : ''}
+                            </div>
+                        </td>
+                        ${p.schedule.map((val, i) => {
+                            let isFuture = (i > state.currentInterval && val === '');
+                            let c = (val==='/'||val==='/X') ? 'text-amber-500' : 'text-emerald-400 font-black';
+                            if (isFuture) c = 'text-slate-700 italic text-[8px]';
+                            if (state.currentInterval === i) {
+                                c += ' bg-rose-500/10 ring-1 ring-inset ring-rose-500/20';
+                                if (state.autoNext && state.autoNextRemaining < 120 && val !== '/' && val !== '/X') {
+                                    c += ' pulse-caution'; // Add pulse caution for current on-air in last 2 mins
+                                }
+                            }
+                            
+                            let displayVal = isFuture ? 'TBD' : val;
+                            return `<td class="p-4 text-center border-r border-white/5 ${c} ${isFuture?'opacity-30':''}">${displayVal}</td>`;
+                        }).join('')}
+                    </tr>`;
+                }).join('')}</tbody></table></div></div></div>`;
+            container.innerHTML = html;
+        }
+
+        function isStudioInLang(sid, lang) {
+            if (lang === 'TR') return ['7','10','3&4','8','9'].includes(sid);
+            return sid.startsWith(lang);
+        }
+
+        async function runPhase1() {
+            const f = document.getElementById('excel-file'); if(!f.files.length) return alert("Select Roster!");
+            const fd = new FormData(); fd.append('file', f.files[0]);
+            try {
+                let r = await fetch('/api/upload', { method: 'POST', body: fd });
+                let res = await r.json();
+                const gps = { 'TR': res.ids.filter(id => id.toUpperCase().endsWith('_TR')), 'RS': res.ids.filter(id => id.toUpperCase().endsWith('_RS')), 'SR': res.ids.filter(id => id.toUpperCase().endsWith('_SR')) };
+                let pList = [];
+                STUDIO_ORDER.forEach(sid => {
+                    const l = isStudioInLang(sid, 'TR') ? 'TR' : sid.substring(0, 2);
+                    const s = STUDIOS[sid]; const src = gps[l];
+                    for(let i=0; i<s.pop; i++) {
+                        let id = src.length > 0 ? src.shift() : `${l}E${Math.floor(Math.random()*999)}`;
+                        pList.push({ id, studio: sid, building: s.b, schedule: new Array(16).fill(''), status: 'pending' });
+                    }
+                });
+                state.presenters = pList; state.phase = 1; await save(); sync();
+            } catch(e) { alert("Fail!"); }
+        }
+
+        async function runPhase2() {
+            // Initial release only calculates INT 1
+            await calculateInterval(0);
+            state.phase = 2; await save(); sync();
+        }
+
+        async function calculateInterval(idx) {
+            STUDIO_ORDER.forEach(sid => {
+                let sD = STUDIOS[sid]; 
+                let ppl = state.presenters.filter(p => p.studio === sid);
+                
+                // Keep ready presenters
+                let readyPool = ppl.filter(p => p.status === 'ready');
+                let notReady = ppl.filter(p => p.status !== 'ready');
+
+                // 30-MIN RULE: Who worked in LAST interval? they CANNOT work in CURRENT interval.
+                let eligibleToWork = readyPool.filter(p => {
+                    if (idx === 0) return true;
+                    let lastV = p.schedule[idx - 1];
+                    return (lastV === '/' || lastV === '/X');
+                });
+
+                // FAIRNESS: Sort eligible by least total work shifts so far
+                eligibleToWork.sort((a, b) => {
+                    let countA = a.schedule.slice(0, idx).filter(v => v !== '' && v !== '/' && v !== '/X').length;
+                    let countB = b.schedule.slice(0, idx).filter(v => v !== '' && v !== '/' && v !== '/X').length;
+                    
+                    if (countA !== countB) return countA - countB;
+
+                    // If work counts are same, pick who worked EARLIEST (last worked index)
+                    let lastIdxA = -1; let lastIdxB = -1;
+                    for (let x = idx - 1; x >= 0; x--) {
+                        if (a.schedule[x] !== '' && a.schedule[x] !== '/' && a.schedule[x] !== '/X') { lastIdxA = x; break; }
+                    }
+                    for (let x = idx - 1; x >= 0; x--) {
+                        if (b.schedule[x] !== '' && b.schedule[x] !== '/' && b.schedule[x] !== '/X') { lastIdxB = x; break; }
+                    }
+                    return lastIdxA - lastIdxB;
+                });
+
+                let activeTableCount = Math.min(sD.t.length, eligibleToWork.length);
+                let activeTables = sD.t.slice(0, activeTableCount);
+
+                // Assign tables
+                eligibleToWork.slice(0, activeTableCount).forEach((p, tIdx) => {
+                    p.schedule[idx] = activeTables[tIdx];
+                });
+
+                // Everyone else in the studio gets Mola (/X)
+                ppl.forEach(p => {
+                    if (p.schedule[idx] === '') p.schedule[idx] = '/X';
+                });
+            });
+        }
+
+        async function save() {
+            await fetch('/api/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shift: state.shift, phase: state.phase, presenters: state.presenters, currentInterval: state.currentInterval }) });
+        }
+
+        async function resetShift() {
+            if(confirm("Reset Shift " + state.shift + "?")) { await fetch('/api/reset', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({shift: state.shift}) }); sync(); }
+        }
+
+        async function prevInterval() { if(state.currentInterval>0) { state.currentInterval--; await save(); sync(); } }
+        async function nextInterval() { 
+            if(state.currentInterval<15) { 
+                let nextIdx = state.currentInterval + 1;
+                // If the next interval is empty for a key presenter, recalculate or fill
+                const isNextEmpty = state.presenters.some(p => p.schedule[nextIdx] === '');
+                if (isNextEmpty) {
+                    await calculateInterval(nextIdx);
+                }
+                state.currentInterval++; 
+                await save(); 
+                sync(); 
+            } 
+        }
+
+        function openSwapModal(id) {
+            const p = state.presenters.find(x => x.id === id);
+            const intIdx = state.currentInterval;
+            document.getElementById('swap-info').innerText = `REPLACE #${id} AT STUDIO ${p.studio}`;
+            
+            // Find people on break in the SAME studio
+            const breakPool = state.presenters.filter(x => x.studio === p.studio && (x.schedule[intIdx] === '/' || x.schedule[intIdx] === '/X'));
+            
+            const list = document.getElementById('swap-list');
+            list.innerHTML = breakPool.map(x => `
+                <button onclick="executeSwap('${id}', '${x.id}')" class="w-full p-4 bg-white/5 hover:bg-emerald-600/20 border border-white/5 hover:border-emerald-500/50 rounded-xl transition-all flex justify-between items-center group">
+                    <span class="font-mono font-bold text-white group-hover:text-emerald-400">#${x.id}</span>
+                    <span class="text-[10px] text-slate-500 uppercase font-black uppercase tracking-widest">Available</span>
+                </button>
+            `).join('') || '<div class="text-center py-8 text-slate-500 italic">No one on break in this studio!</div>';
+            
+            document.getElementById('swap-modal').classList.remove('hidden');
+        }
+
+        async function executeSwap(orig, repl) {
+            if (!confirm(`Are you sure you want to swap ${orig} with ${repl}?`)) return;
+            try {
+                await fetch('/api/execute-swap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shift: state.shift, originalId: orig, replacementId: repl })
+                });
+                document.getElementById('swap-modal').classList.add('hidden');
+                sync();
+            } catch(e) { alert("Swap failed!"); }
+        }
+
+        setInterval(sync, 3000);
+        sync();
+        toggleAutoNext();
+    </script>
+</body>
+</html>

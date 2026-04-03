@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WFM FS Dashboard - Arrival & Readiness</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; margin: 0; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+        <!-- Header -->
+        <div class="w-full max-w-7xl flex flex-col md:flex-row justify-between items-center mb-8 gap-4 glass p-6 rounded-3xl border border-white/10 shadow-2xl">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                    <span class="text-2xl font-black text-white">FS</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight text-white uppercase">WFM <span class="text-emerald-500">RECEPTION</span></h1>
+                    <p class="text-slate-400 text-xs font-bold tracking-widest uppercase opacity-70">Floor Supervisor Dashboard</p>
+                </div>
+            </div>
+            
+            <div class="flex bg-black/40 p-1 rounded-xl border border-white/5 gap-1">
+                <button onclick="changeShift(1)" id="shift-btn-1" class="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white">SHIFT 1</button>
+                <button onclick="changeShift(2)" id="shift-btn-2" class="px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">SHIFT 2</button>
+                <button onclick="changeShift(3)" id="shift-btn-3" class="px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">SHIFT 3</button>
+            </div>
+
+            <div id="clock" class="text-xl font-mono font-bold text-emerald-500 bg-black/40 px-4 py-2 rounded-xl border border-white/10">00:00:00</div>
+        </div>
+
+        <main class="w-full max-w-7xl space-y-6">
+            <!-- Controls -->
+            <div class="glass p-4 rounded-2xl border border-white/10 flex flex-col gap-4 shadow-lg">
+                <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <div class="flex bg-black/40 p-1 rounded-xl border border-white/5 gap-1 overflow-x-auto w-full md:w-auto mt-4 md:mt-0">
+                        <button onclick="setFilter('all')" id="filter-all" class="px-4 py-1.5 text-xs font-bold transition-all bg-slate-700 text-white rounded-lg">ALL</button>
+                        <button onclick="setFilter('pending')" id="filter-pending" class="px-4 py-1.5 text-xs font-bold transition-all text-amber-500 hover:bg-white/5 rounded-lg">NOT HERE</button>
+                        <button onclick="setFilter('arrived')" id="filter-arrived" class="px-4 py-1.5 text-xs font-bold transition-all text-blue-400 hover:bg-white/5 rounded-lg">AT MAKEUP</button>
+                        <button onclick="setFilter('ready')" id="filter-ready" class="px-4 py-1.5 text-xs font-bold transition-all text-emerald-400 hover:bg-white/5 rounded-lg">READY</button>
+                    </div>
+                </div>
+                <div class="flex flex-col md:flex-row gap-4 border-t border-white/5 pt-4">
+                    <!-- Languages -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black uppercase text-slate-500 tracking-widest">LANG:</span>
+                        <div class="flex bg-black/40 p-1 rounded-xl border border-white/5 gap-1">
+                            <button onclick="setLang('ALL')" id="lang-ALL" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white">ALL</button>
+                            <button onclick="setLang('TR')" id="lang-TR" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:bg-white/5">TR</button>
+                            <button onclick="setLang('RS')" id="lang-RS" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:bg-white/5">RS</button>
+                            <button onclick="setLang('SR')" id="lang-SR" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:bg-white/5">SR</button>
+                        </div>
+                    </div>
+                    <!-- Buildings -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black uppercase text-slate-500 tracking-widest pl-2 md:pl-4 md:border-l border-white/10">BLDG:</span>
+                        <div class="flex bg-black/40 p-1 rounded-xl border border-white/5 gap-1">
+                            <button onclick="setBldg('ALL')" id="bldg-ALL" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-rose-600 text-white">ALL</button>
+                            <button onclick="setBldg('A2')" id="bldg-A2" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:bg-white/5">A2</button>
+                            <button onclick="setBldg('E1')" id="bldg-E1" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:bg-white/5">E1</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List container -->
+            <div id="content" class="min-h-[500px]"></div>
+        </main>
+    </div>
+
+    <script>
+        let state = { shift: 1, presenters: [], phase: 0, sortStudios: [] };
+        let filterStatus = 'all';
+        let filterLang = 'ALL';
+        let filterBldg = 'ALL';
+
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('tr-TR'); }, 1000);
+
+        async function changeShift(s) {
+            state.shift = s;
+            [1,2,3].forEach(n => document.getElementById(`shift-btn-${n}`).className = (n===s)?"px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 text-white":"px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white");
+            await sync();
+        }
+
+        function setFilter(f) {
+            filterStatus = f;
+            ['all','pending','arrived','ready'].forEach(k => {
+                let btn = document.getElementById('filter-'+k);
+                if (k === f) {
+                    btn.className = `px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-white bg-slate-700`;
+                } else {
+                    let col = (k==='pending')?'text-amber-500':(k==='arrived')?'text-blue-400':(k==='ready')?'text-emerald-400':'text-slate-400';
+                    btn.className = `px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/5 ${col}`;
+                }
+            });
+            renderList();
+        }
+
+        function setLang(l) {
+            filterLang = l;
+            ['ALL','TR','RS','SR'].forEach(k => {
+                let btn = document.getElementById('lang-'+k);
+                btn.className = (k === l) ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-blue-600 text-white" : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:bg-white/5";
+            });
+            renderList();
+        }
+
+        function setBldg(b) {
+            filterBldg = b;
+            ['ALL','A2','E1'].forEach(k => {
+                let btn = document.getElementById('bldg-'+k);
+                btn.className = (k === b) ? "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-rose-600 text-white" : "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:bg-white/5";
+            });
+            renderList();
+        }
+
+        async function sync() {
+            try {
+                let r = await fetch(`/api/state?shift=${state.shift}`);
+                let data = await r.json();
+                state.phase = data.phase;
+                state.presenters = data.presenters;
+                state.sortStudios = data.sortStudios || [];
+                renderList();
+            } catch(e) {}
+        }
+
+        function getLangOfStudio(sid) {
+            if (['7','10','3&4','8','9'].includes(sid)) return 'TR';
+            if (sid.startsWith('RS')) return 'RS';
+            if (sid.startsWith('SR')) return 'SR';
+            return 'ALL';
+        }
+
+        function renderList() {
+            const container = document.getElementById('content');
+            if (state.phase === 0) {
+                container.innerHTML = `<div class="h-[400px] flex items-center justify-center text-slate-500 font-bold italic glass rounded-3xl opacity-50">Shift ${state.shift}: Waiting for roster publication...</div>`;
+                return;
+            }
+
+            let filtered = state.presenters.filter(p => {
+                let s = p.status || 'pending';
+                if (filterStatus !== 'all' && s !== filterStatus) return false;
+                if (filterBldg !== 'ALL' && p.building !== filterBldg) return false;
+                if (filterLang !== 'ALL') {
+                    if (filterLang !== getLangOfStudio(p.studio)) return false;
+                }
+                return true;
+            });
+
+            filtered.sort((a,b) => {
+                // Extract numbers from ID for natural sorting
+                const matchA = a.id.match(/(\d+)/);
+                const matchB = b.id.match(/(\d+)/);
+                if (matchA && matchB) {
+                    return parseInt(matchA[1]) - parseInt(matchB[1]);
+                }
+                return a.id.localeCompare(b.id);
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-500 font-bold glass rounded-3xl">No presenters found.</div>`;
+                return;
+            }
+
+            let html = '';
+            
+            ['A2', 'E1'].forEach(bldg => {
+                let pBldg = filtered.filter(p => p.building === bldg);
+                if (pBldg.length === 0) return;
+
+                html += `<div class="mb-8 glass p-6 rounded-3xl border border-white/10 shadow-xl overflow-hidden">
+                            <h2 class="text-xl md:text-2xl font-black text-rose-500 mb-6 border-b border-white/10 pb-4 shadow-sm flex items-center gap-3">
+                                <span class="bg-rose-600/20 px-3 py-1 rounded-lg text-rose-400">🏢</span> BUILDING ${bldg}
+                            </h2>
+                            <div class="space-y-8">`;
+
+                ['TR', 'RS', 'SR'].forEach(lang => {
+                    let pLang = pBldg.filter(p => getLangOfStudio(p.studio) === lang);
+                    if (pLang.length === 0) return;
+
+                    html += `<div>
+                                <h3 class="text-lg font-black text-blue-400 mb-4 flex items-center gap-2">
+                                    <span class="w-1.5 h-6 bg-blue-500 rounded-full inline-block"></span> ${lang} GROUP
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`;
+
+                    let studios = [...new Set(pLang.map(p => p.studio))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+
+                    studios.forEach(sid => {
+                        let pStudio = pLang.filter(p => p.studio === sid);
+                        let needsSort = state.sortStudios.includes(sid);
+                        
+                        html += `
+                        <div class="bg-black/30 p-4 rounded-2xl border ${needsSort ? 'border-orange-500/60 shadow-orange-500/20 shadow-lg' : 'border-white/5 hover:border-white/10'} transition-colors shadow-inner flex flex-col h-full">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="text-xs font-black text-white bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm">STUDIO ${sid}</h4>
+                                <span class="text-[9px] text-slate-400 font-bold bg-black/40 px-2 py-1 rounded-md uppercase tracking-widest">${pStudio.length} Pers</span>
+                            </div>
+                            ${needsSort ? `
+                            <div class="mb-3 flex items-center justify-between gap-2 bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-block w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+                                    <span class="text-[10px] font-black text-orange-400 uppercase tracking-widest">Sort Gerekli</span>
+                                </div>
+                                <button onclick="markSortDone('${sid}')" class="text-[9px] bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg font-black transition-all active:scale-95 shadow-md shadow-emerald-500/20">✅ FS Sort Bitti</button>
+                            </div>` : `
+                            <div class="mb-3">
+                                <button onclick="requestSort('${sid}')" class="w-full text-[10px] bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 hover:border-orange-400/60 text-orange-400 hover:text-orange-300 px-3 py-2 rounded-xl font-black transition-all active:scale-95 flex items-center justify-center gap-1.5">
+                                    🔀 Sort Gerekli
+                                </button>
+                            </div>`}
+                            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2 flex-grow content-start">`;
+                        
+                        pStudio.forEach(p => {
+                            let status = p.status || 'pending';
+                            let isPend = status === 'pending';
+                            let isArrv = status === 'arrived';
+                            let isRed = status === 'ready';
+
+                            let bgClass = isRed ? 'bg-emerald-600 border-emerald-500 shadow-md ring-1 ring-emerald-500/50' 
+                                        : isArrv ? 'bg-blue-600 border-blue-500 shadow-md' 
+                                        : 'bg-slate-800 border-white/5 hover:bg-slate-700';
+                            
+                            let textClass = (isRed || isArrv) ? 'text-white' : 'text-slate-300';
+                            let statusLabel = isRed ? 'READY' : isArrv ? 'MAKEUP' : 'NOT HERE';
+
+                            html += `
+                            <button onclick="cycleStatus('${p.id}')" class="p-2 sm:p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer hover:shadow-lg ${bgClass}">
+                                <span class="font-mono text-xs sm:text-sm font-black ${textClass}">#${p.id}</span>
+                                <span class="text-[7px] uppercase font-bold tracking-widest opacity-80 ${textClass}">${statusLabel}</span>
+                            </button>`;
+                        });
+
+                        html += `</div></div>`; // End Grid for IDs, End Studio Block
+                    });
+
+                    html += `</div></div>`; // End Grid for Studios, End Lang Block
+                });
+
+                html += `</div></div>`; // End Bldg Block
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function cycleStatus(id) {
+            let p = state.presenters.find(x => x.id === id);
+            if (!p) return;
+            
+            let current = p.status || 'pending';
+            let next = 'pending';
+            if (current === 'pending') next = 'arrived';
+            else if (current === 'arrived') next = 'ready';
+            else if (current === 'ready') next = 'pending';
+            
+            p.status = next;
+            renderList(); 
+            
+            try {
+                let r = await fetch('/api/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shift: state.shift, id: id, status: next })
+                });
+                if (!r.ok) {
+                    throw new Error("API err");
+                }
+            } catch(e) {
+                alert("Failed to update status for #" + id);
+            }
+        }
+
+        async function requestSort(studio) {
+            if (!confirm(`"Studio ${studio}" için sort gerektiğini bildirmek istiyor musunuz?`)) return;
+            try {
+                state.sortStudios = state.sortStudios || [];
+                if (!state.sortStudios.includes(studio)) state.sortStudios.push(studio);
+                renderList();
+                await fetch('/api/sort-studio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shift: state.shift, studio })
+                });
+            } catch(e) { alert('Sort isteği gönderilemedi.'); }
+        }
+
+        async function markSortDone(studio) {
+            if (!confirm(`"Studio ${studio}" için sort bitti mi?`)) return;
+            try {
+                state.sortStudios = (state.sortStudios || []).filter(s => s !== studio);
+                renderList();
+                await fetch('/api/sort-done', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shift: state.shift, studio })
+                });
+            } catch(e) { alert('Sort bitti bildirimi gönderilemedi.'); }
+        }
+
+        setInterval(sync, 4000);
+        sync();
+    </script>
+</body>
+</html>

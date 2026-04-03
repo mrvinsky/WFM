@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WFM Shuffler Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; margin: 0; }
+        .glass { background: rgba(30,41,59,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        .pulse-caution { animation: pulseW 1.5s infinite; }
+        @keyframes pulseW { 0%,100%{background-color:rgba(245,158,11,0.2)} 50%{background-color:rgba(245,158,11,0.6)} }
+    </style>
+</head>
+<body>
+<div class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+    <!-- Header -->
+    <div class="w-full max-w-7xl flex flex-col md:flex-row justify-between items-center mb-6 gap-4 glass p-6 rounded-3xl border border-white/10 shadow-2xl">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-violet-500/30">
+                <span class="text-xl font-black text-white">SH</span>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black tracking-tight text-white uppercase">SHUFFLER <span class="text-violet-400">ADMIN</span></h1>
+                <p class="text-slate-400 text-xs font-bold tracking-widest uppercase opacity-70">Rotation Manager · 30/30 Cycle</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Shift tabs -->
+            <div class="flex bg-black/40 p-1 rounded-xl border border-white/5 gap-1">
+                <button onclick="changeShift(1)" id="shift-btn-1" class="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-violet-600 text-white">SHIFT 1</button>
+                <button onclick="changeShift(2)" id="shift-btn-2" class="px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">SHIFT 2</button>
+                <button onclick="changeShift(3)" id="shift-btn-3" class="px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">SHIFT 3</button>
+            </div>
+            <div id="clock" class="text-xl font-mono font-bold text-violet-400 bg-black/40 px-4 py-2 rounded-xl border border-white/10">00:00:00</div>
+        </div>
+
+        <!-- Nav links -->
+        <div class="flex gap-2">
+            <a href="/admin" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:bg-white/5 border border-white/5 transition-all">← MAIN ADMIN</a>
+            <a href="/shuffler-dashboard" target="_blank" class="px-4 py-2 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 transition-all">📺 DASHBOARD</a>
+            <a href="/shffs" class="px-4 py-2 rounded-xl text-xs font-bold text-violet-300 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 transition-all">SHFFS SCREEN →</a>
+        </div>
+    </div>
+
+    <main class="w-full max-w-7xl space-y-6">
+
+        <!-- Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-4 glass p-5 rounded-3xl border border-white/10 shadow-xl">
+            <div class="flex gap-3 items-center flex-wrap">
+                <div class="relative">
+                    <input type="file" id="excel-file" class="hidden" onchange="document.getElementById('file-name').innerText=this.files[0].name">
+                    <label for="excel-file" class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl cursor-pointer border border-white/10 font-bold text-sm transition-all">
+                        <span>📂</span><span id="file-name">Select Roster</span>
+                    </label>
+                </div>
+                <button id="btn-phase1" onclick="runPhase1()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-sm uppercase transition-all shadow-lg active:scale-95">1. Import</button>
+                <button id="btn-phase2" onclick="runPhase2()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-sm uppercase transition-all shadow-lg active:scale-95 disabled:opacity-30" disabled>2. Release</button>
+            </div>
+
+            <!-- Interval controls (visible after release) -->
+            <div id="live-controls" class="hidden items-center gap-4">
+                <div class="flex items-center gap-2 bg-black/20 p-2 rounded-xl border border-white/5">
+                    <button onclick="prevInterval()" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-white font-bold">◀</button>
+                    <div class="flex flex-col items-center min-w-[130px]">
+                        <span id="interval-label" class="font-mono font-black text-violet-400 text-lg">INT 1</span>
+                        <div class="flex items-center gap-2 mt-1">
+                            <input type="checkbox" id="auto-next-toggle" class="w-3 h-3 accent-violet-500" onchange="toggleAutoNext()" checked>
+                            <label for="auto-next-toggle" class="text-[8px] font-bold text-slate-500 uppercase">Auto-Next</label>
+                            <span id="auto-next-timer" class="text-[10px] font-mono font-bold text-amber-400 hidden">30:00</span>
+                        </div>
+                    </div>
+                    <button onclick="nextInterval()" class="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-white font-bold">▶</button>
+                </div>
+                <button onclick="resetShift()" class="px-4 py-2.5 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-600/30 rounded-xl text-xs font-black transition-all">RESET</button>
+            </div>
+        </div>
+
+        <!-- Tab nav -->
+        <div id="nav-tabs" class="flex flex-wrap gap-2">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-violet-600 text-white shadow-lg">DASHBOARD</button>
+            <button onclick="switchTab('buildings')" id="tab-buildings" class="px-5 py-2.5 rounded-xl font-black text-sm transition-all text-slate-400 hover:bg-white/5">BUILDINGS</button>
+            <button onclick="switchTab('matrix')" id="tab-matrix" class="px-5 py-2.5 rounded-xl font-black text-sm transition-all text-slate-400 hover:bg-white/5">MATRIX</button>
+        </div>
+
+        <!-- Content -->
+        <div id="content" class="min-h-[500px]"></div>
+    </main>
+</div>
+
+<script>
+    // ── Studio definitions (same as main system) ──────────────────────────────
+    const STUDIOS = {
+        '7':   { b:'A2' }, '10':  { b:'A2' }, '3&4': { b:'A2' },
+        '8':   { b:'E1' }, '9':   { b:'E1' }
+    };
+    const STUDIO_ORDER = ['7','10','3&4','8','9'];
+    ['RS','SR'].forEach(lang => {
+        for (let i = 1; i <= 6; i++) {
+            const sid = `${lang}${i}`;
+            STUDIOS[sid] = { b: i <= 3 ? 'A2' : 'E1' };
+            STUDIO_ORDER.push(sid);
+        }
+    });
+
+    const SLOTS_PER_STUDIO = 3; // max simultaneous shufflers per studio
+    const INTERVALS = 16;
+
+    let state = { shift:1, shufflers:[], phase:0, currentInterval:0, activeTab:'dashboard', autoNext:false, autoNextRemaining:1800 };
+    let autoTimer = null;
+
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('tr-TR'); }, 1000);
+
+    function isStudioInLang(sid, lang) {
+        if (lang === 'TR') return ['7','10','3&4','8','9'].includes(sid);
+        return sid.startsWith(lang);
+    }
+
+    // ── Shift / Tab ───────────────────────────────────────────────────────────
+    async function changeShift(s) {
+        state.shift = s;
+        [1,2,3].forEach(n => {
+            document.getElementById(`shift-btn-${n}`).className = (n===s)
+                ? 'px-4 py-2 rounded-lg text-xs font-bold transition-all bg-violet-600 text-white'
+                : 'px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white';
+        });
+        await sync();
+    }
+
+    function switchTab(t) {
+        state.activeTab = t;
+        ['dashboard','buildings','matrix'].forEach(k => {
+            document.getElementById('tab-'+k).className = (k===t)
+                ? 'px-5 py-2.5 rounded-xl font-black text-sm transition-all bg-violet-600 text-white shadow-lg'
+                : 'px-5 py-2.5 rounded-xl font-black text-sm transition-all text-slate-400 hover:bg-white/5';
+        });
+        refreshUI();
+    }
+
+    // ── Auto-Next ─────────────────────────────────────────────────────────────
+    function toggleAutoNext() {
+        state.autoNext = document.getElementById('auto-next-toggle').checked;
+        const t = document.getElementById('auto-next-timer');
+        if (state.autoNext) {
+            t.classList.remove('hidden');
+            state.autoNextRemaining = 1800;
+            if (autoTimer) clearInterval(autoTimer);
+            autoTimer = setInterval(() => {
+                if (state.phase !== 2) return;
+                state.autoNextRemaining--;
+                const m = Math.floor(state.autoNextRemaining/60), ss = state.autoNextRemaining%60;
+                t.innerText = `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+                if (state.autoNextRemaining <= 0) { nextInterval(); state.autoNextRemaining = 1800; }
+                else if (state.autoNextRemaining < 120) refreshUI();
+            }, 1000);
+        } else {
+            t.classList.add('hidden');
+            if (autoTimer) clearInterval(autoTimer);
+        }
+    }
+
+    // ── Sync from server ──────────────────────────────────────────────────────
+    async function sync() {
+        try {
+            const r = await fetch(`/api/shf/state?shift=${state.shift}`);
+            const data = await r.json();
+            state.phase = data.phase;
+            state.shufflers = data.shufflers;
+            state.currentInterval = data.currentInterval;
+
+            const b2 = document.getElementById('btn-phase2');
+            if (state.phase === 1) {
+                const hasActive = state.shufflers.some(p => p.status === 'active');
+                b2.disabled = !hasActive;
+                b2.innerText = hasActive ? '2. Release' : '2. Release (Waiting for Check-In)';
+                b2.className = hasActive
+                    ? 'px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-sm uppercase transition-all shadow-lg active:scale-95'
+                    : 'px-5 py-2.5 bg-slate-700 text-slate-400 rounded-xl font-black text-sm uppercase cursor-not-allowed text-[10px]';
+            } else {
+                b2.disabled = true;
+                b2.innerText = '2. Release';
+                b2.className = 'px-5 py-2.5 bg-slate-700 text-slate-400 rounded-xl font-black text-sm uppercase cursor-not-allowed text-[10px]';
+            }
+
+            if (state.phase === 2) {
+                document.getElementById('live-controls').classList.remove('hidden');
+                document.getElementById('live-controls').classList.add('flex');
+                document.getElementById('interval-label').innerText = `INT ${state.currentInterval+1}`;
+            } else {
+                document.getElementById('live-controls').classList.add('hidden');
+                document.getElementById('live-controls').classList.remove('flex');
+            }
+            refreshUI();
+        } catch(e) {}
+    }
+
+    // ── UI Render ─────────────────────────────────────────────────────────────
+    function refreshUI() {
+        const el = document.getElementById('content');
+        if (state.phase === 0) {
+            el.innerHTML = `<div class="h-[400px] flex items-center justify-center text-slate-500 font-bold italic glass rounded-3xl opacity-50">Shift ${state.shift}: Awaiting roster import...</div>`;
+            return;
+        }
+        if (state.activeTab === 'dashboard') renderDashboard();
+        else if (state.activeTab === 'buildings') renderBuildings();
+        else renderMatrix();
+    }
+
+    function renderDashboard() {
+        const el = document.getElementById('content');
+        let onWork = 0, onBreak = 0;
+        if (state.phase === 2) {
+            state.shufflers.forEach(p => {
+                const v = p.schedule[state.currentInterval];
+                if (v === '/') onBreak++; else onWork++;
+            });
+        }
+        el.innerHTML = `
+        <div class="fade-in space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass p-8 rounded-3xl text-center border border-white/5">
+                    <div class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Total Shufflers</div>
+                    <div class="text-5xl font-black text-white">${state.shufflers.length}</div>
+                </div>
+                <div class="glass p-8 rounded-3xl text-center border border-violet-500/20">
+                    <div class="text-[10px] font-black text-violet-400 mb-2 uppercase tracking-widest">On Work Now</div>
+                    <div class="text-5xl font-black text-violet-400">${onWork}</div>
+                </div>
+                <div class="glass p-8 rounded-3xl text-center border border-amber-500/20">
+                    <div class="text-[10px] font-black text-amber-400 mb-2 uppercase tracking-widest">On Break</div>
+                    <div class="text-5xl font-black text-amber-500">${onBreak}</div>
+                </div>
+            </div>
+            <div class="glass p-6 rounded-3xl border border-white/5">
+                <h3 class="font-black text-white mb-6 uppercase text-xs tracking-widest">Studio Occupancy</h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    ${STUDIO_ORDER.map(sid => {
+                        const ppl = state.shufflers.filter(p => p.studio === sid);
+                        const active = state.phase === 2 ? ppl.filter(p => p.schedule[state.currentInterval] !== '/').length : ppl.length;
+                        return `<div class="bg-black/20 p-3 rounded-xl border border-white/5">
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Studio ${sid}</div>
+                            <div class="text-2xl font-black text-white">${ppl.length}</div>
+                            ${state.phase===2 ? `<div class="text-[9px] text-violet-400 font-bold">${active} working</div>` : ''}
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function renderBuildings() {
+        const el = document.getElementById('content');
+        let html = `<div class="fade-in grid grid-cols-1 lg:grid-cols-2 gap-6">`;
+        ['A2','E1'].forEach(b => {
+            html += `<div class="glass p-6 rounded-3xl border border-white/10">
+                <h3 class="text-sm font-black text-violet-400 mb-5 border-b border-white/10 pb-3 uppercase tracking-widest">BUILDING ${b}</h3>
+                <div class="space-y-3">`;
+            STUDIO_ORDER.filter(sid => STUDIOS[sid].b === b).forEach(sid => {
+                const ppl = state.shufflers.filter(p => p.studio === sid);
+                html += `<div class="bg-black/20 p-3 rounded-xl border border-white/5">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-black text-white text-xs uppercase">Studio ${sid}</span>
+                        <span class="text-[10px] bg-white/5 text-slate-400 px-2 py-1 rounded-full font-bold">${ppl.length} Shufflers</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1">${ppl.map(p => `<span class="text-[9px] font-mono bg-black/40 px-2 py-1 rounded text-slate-400 border border-white/5">#${p.id}</span>`).join('')}</div>
+                </div>`;
+            });
+            html += `</div></div>`;
+        });
+        el.innerHTML = html + `</div>`;
+    }
+
+    let matLang = 'TR'; let matStudio = '7';
+    function renderMatrix() {
+        const el = document.getElementById('content');
+        const studios = STUDIO_ORDER.filter(s => isStudioInLang(s, matLang));
+        if (!studios.includes(matStudio)) matStudio = studios[0];
+        let html = `<div class="fade-in space-y-4">
+            <div class="flex gap-2 p-2 bg-black/20 rounded-2xl border border-white/5">
+                ${['TR','RS','SR'].map(l => `<button onclick="matLang='${l}';renderMatrix()" class="px-5 py-2 rounded-xl text-xs font-black transition-all ${matLang===l?'bg-violet-600 text-white':'text-slate-400 hover:text-white'}">${l}</button>`).join('')}
+            </div>
+            <div class="flex flex-wrap gap-2">
+                ${studios.map(sid => `<button onclick="matStudio='${sid}';renderMatrix()" class="px-3 py-2 rounded-xl text-[10px] font-black transition-all ${matStudio===sid?'bg-violet-700 text-white':'bg-white/5 text-slate-400 hover:text-white'}">${sid}</button>`).join('')}
+            </div>`;
+
+        const people = state.shufflers.filter(p => p.studio === matStudio);
+        html += `<div class="glass rounded-3xl overflow-hidden border border-white/10"><div class="overflow-x-auto"><table class="w-full text-left text-sm border-collapse">
+            <thead><tr class="bg-slate-950/80 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                <th class="p-4 sticky left-0 bg-slate-900 border-r border-white/5 w-36">Shuffler</th>
+                ${Array.from({length:INTERVALS},(_,i)=>`<th class="p-4 text-center border-r border-white/5 ${state.currentInterval===i?'text-violet-400':''} whitespace-nowrap">INT ${i+1}</th>`).join('')}
+            </tr></thead>
+            <tbody class="divide-y divide-white/5">${people.map(p => {
+                const isActive = p.status === 'active';
+                const rowBg = isActive ? 'bg-violet-700/10' : '';
+                return `<tr class="hover:bg-white/5 transition-colors ${rowBg}">
+                    <td class="p-4 font-mono font-bold sticky left-0 border-r border-white/5 ${isActive?'bg-violet-700 text-white':'bg-slate-800 text-slate-300'}">
+                        <div>#${p.id}</div>
+                        <div class="text-[8px] font-bold mt-0.5 ${isActive?'text-violet-200':'text-slate-600'} uppercase">${isActive?'ACTIVE':'PENDING'}</div>
+                    </td>
+                    ${(p.schedule||[]).map((val,i) => {
+                        const isFuture = (i > state.currentInterval && val === '');
+                        const isBreak = val === '/';
+                        let cls = isBreak ? 'text-amber-500' : val ? 'text-violet-400 font-black' : 'text-slate-700';
+                        if (isFuture) cls = 'text-slate-700 opacity-30 text-[10px] italic';
+                        if (state.currentInterval === i) cls += ' bg-violet-500/10 ring-1 ring-inset ring-violet-500/30';
+                        return `<td class="p-4 text-center border-r border-white/5 ${cls}">${isFuture ? '…' : (val||'-')}</td>`;
+                    }).join('')}
+                </tr>`;
+            }).join('')}</tbody>
+        </table></div></div></div>`;
+        el.innerHTML = html;
+    }
+
+    // ── Phase 1: Import ───────────────────────────────────────────────────────
+    async function runPhase1() {
+        const f = document.getElementById('excel-file');
+        if (!f.files.length) return alert('Select a roster file!');
+        const fd = new FormData(); fd.append('file', f.files[0]);
+        try {
+            const r = await fetch('/api/shf/upload', { method:'POST', body:fd });
+            const res = await r.json();
+            const ids = res.ids || [];
+            // Distribute evenly across studios (round-robin)
+            let list = [];
+            const studioQueues = {};
+            STUDIO_ORDER.forEach(sid => studioQueues[sid] = []);
+            let si = 0;
+            ids.forEach(id => {
+                studioQueues[STUDIO_ORDER[si % STUDIO_ORDER.length]].push(id);
+                si++;
+            });
+            STUDIO_ORDER.forEach(sid => {
+                studioQueues[sid].forEach(id => {
+                    list.push({ id, studio: sid, building: STUDIOS[sid].b, schedule: new Array(INTERVALS).fill(''), status: 'pending' });
+                });
+            });
+            state.shufflers = list;
+            state.phase = 1;
+            await save();
+            sync();
+        } catch(e) { alert('Import failed!'); }
+    }
+
+    // ── Phase 2: Release ──────────────────────────────────────────────────────
+    async function runPhase2() {
+        await calculateInterval(0);
+        state.phase = 2;
+        await save();
+        sync();
+    }
+
+    // ── Interval Calculation (30-min work / 30-min break, max 3/slot) ────────
+    async function calculateInterval(idx) {
+        STUDIO_ORDER.forEach(sid => {
+            const active = state.shufflers.filter(p => p.studio === sid && p.status === 'active');
+
+            // 30-min rule: who was on break last interval can work now (and vice versa)
+            let eligible = active.filter(p => {
+                if (idx === 0) return true;
+                return p.schedule[idx-1] === '/'; // was on break → can work
+            });
+
+            // Fairness: sort by least work intervals so far
+            eligible.sort((a,b) => {
+                const wa = a.schedule.slice(0,idx).filter(v => v !== '' && v !== '/').length;
+                const wb = b.schedule.slice(0,idx).filter(v => v !== '' && v !== '/').length;
+                if (wa !== wb) return wa - wb;
+                // tie-break: who worked earliest
+                let la=-1, lb=-1;
+                for (let x=idx-1;x>=0;x--) { if(a.schedule[x]!==''&&a.schedule[x]!=='/'){la=x;break;} }
+                for (let x=idx-1;x>=0;x--) { if(b.schedule[x]!==''&&b.schedule[x]!=='/'){lb=x;break;} }
+                return la - lb;
+            });
+
+            // Assign up to SLOTS_PER_STUDIO workers
+            const workers = eligible.slice(0, SLOTS_PER_STUDIO);
+            const workerIds = new Set(workers.map(p=>p.id));
+
+            active.forEach(p => {
+                p.schedule[idx] = workerIds.has(p.id) ? sid : '/';
+            });
+
+            // pending shufflers get empty
+            state.shufflers.filter(p => p.studio === sid && p.status === 'pending').forEach(p => {
+                p.schedule[idx] = '';
+            });
+        });
+    }
+
+    async function save() {
+        await fetch('/api/shf/state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ shift: state.shift, phase: state.phase, shufflers: state.shufflers, currentInterval: state.currentInterval })
+        });
+    }
+
+    async function resetShift() {
+        if (!confirm(`Reset Shuffler Shift ${state.shift}?`)) return;
+        await fetch('/api/shf/reset', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({shift:state.shift}) });
+        sync();
+    }
+
+    async function prevInterval() {
+        if (state.currentInterval > 0) { state.currentInterval--; await save(); sync(); }
+    }
+    async function nextInterval() {
+        if (state.currentInterval < INTERVALS-1) {
+            const next = state.currentInterval + 1;
+            const isEmpty = state.shufflers.some(p => p.status === 'active' && p.schedule[next] === '');
+            if (isEmpty) await calculateInterval(next);
+            state.currentInterval++;
+            await save(); sync();
+        }
+    }
+
+    setInterval(sync, 4000);
+    sync();
+    toggleAutoNext();
+</script>
+</body>
+</html>
