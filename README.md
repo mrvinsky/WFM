@@ -68,4 +68,4 @@ WFM Studio Rotation Pro provides a "glassmorphism" styled interface to manage co
 - **API**: Check `server.js` for endpoints like `/api/state`, `/api/shf/state`, and `/api/notify-swap`.
 
 ---
-*Built with ❤️ by Antigravity AI for WFM optimization.*
+*Built with Mr.Vinskyfor WFM optimization.*
